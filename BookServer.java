@@ -173,3 +173,119 @@ public class BookServer {
     // TODO: handle request from clients
   }
 }
+
+public class BookInventory {
+  Set<Book> inventory;
+  int rid;
+  HashMap<String, ArrayList<Book>> studentList;
+
+  public class Book {
+      String name;
+      int quantity;
+      int id;
+
+      Book(String n, int amount) {
+        name = n;
+        quantity = amount;
+        id = -1;
+      }
+  }
+
+  BookInventory() {
+    inventory = new HashSet<Book>();
+    rid = 0;
+    studentList = new HashMap<>();
+    // Change to hashmap.
+  }
+
+
+  public void addBook(String bookname, int amount) {
+    Book newbook = new Book(bookname, amount);
+    inventory.add(newbook);
+  }
+
+
+  /*
+  Borrow command returns true if book is available to borrow, thus set to client.
+  Else returns false
+   */
+  public synchronized String borrow(String bookname, String client) {
+    String s = "";
+  for(Book b : inventory) {
+    if((b.name).equals(bookname)) {
+      if (b.quantity == 0) {
+        s = "Request Failed - Book not available";
+        return s;
+      }
+      if(studentList.containsKey(client)) {
+        //Insert book into client's invent
+        ArrayList<Book> temp = studentList.get(client);
+        Book bb = b;
+        rid++;
+        b--;
+        bb.id = rid;
+        temp.add(bb);
+        studentList.replace(client,temp);
+      } else {
+        ArrayList<Book> temp = new ArrayList<Book>();
+        Book bb = b;
+        rid++;
+        b--;
+        bb.id = rid;
+        temp.add(bb);
+        studentList.put(client, temp);
+      }
+      s = "Your request has been approved, " + rid.toString();
+      return s;
+    }
+  }
+  s = "Request Failed - We do not have this book";
+  return s;
+  }
+  /*
+Return command returns recordid of book associated with the passed id.
+ */
+  public synchronized String returning(int recordid) {
+    //Access book here...
+    String s = "";
+
+    // Use record class.
+    s = recordid + " is returned";
+    // else return
+    s = recordid + " not found";
+    return s;
+  }
+  /*
+Lists all books borrowed by student.
+Returns message if no record.
+ */
+  public synchronized String list(String client) {
+    String s = "";
+    ArrayList<Book> temp = studentList.get(client);
+    for(int i = 0; i <temp.length(); i++) {
+      s += temp.get(i).name + " " + temp.get(i).record;
+    }
+    if(s == "") {
+      "No record found for " + client;
+    }
+    // Concatenate into some long string
+
+
+    return s;
+  }
+
+  /*
+Lists All Books in inventory.
+*/
+  public synchronized String getInventory() {
+    String s = "";
+    for(Book b : inventory) {
+      System.out.println(b.name + " " + b.record);
+      // change to add to s
+    }
+    return s;
+  }
+
+
+
+}

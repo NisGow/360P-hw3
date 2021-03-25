@@ -48,7 +48,7 @@ public class BookClient {
             }else{
               if(tcp){
                 tcp = false;
-                server.close();;
+                server.close();
               }
               ia = InetAddress.getByName(hostAddress);
               datasocket = new DatagramSocket();
