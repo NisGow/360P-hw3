@@ -24,6 +24,9 @@ class UDPServerThread extends Thread{
     String command = new String(datapacket.getData());
     buffer = command.getBytes();
     String[] tokens = command.split(" ");
+    for(int i =0; i < tokens.length; i++){
+      tokens[i] = tokens[i].trim();
+    }
     if (tokens[0].equals("setmode")) {
       String response = "The communication mode is set to UDP";
       buffer = response.getBytes();
@@ -31,8 +34,9 @@ class UDPServerThread extends Thread{
     } else if (tokens[0].equals("borrow")) {
       String stu = tokens[1];
       String[] arg = command.split("\"");
+      arg[1].trim();
       String bName = arg[1];
-      String response = bI.borrow(stu,bName);
+      String response = bI.borrow(bName,stu);
       buffer = response.getBytes();
       // TODO: send appropriate command to the server and display the
       // appropriate responses form the server
@@ -60,6 +64,7 @@ class UDPServerThread extends Thread{
       buffer = response.getBytes();
       // TODO: send appropriate command to the server
     } else {
+      //System.out.println(command);
       System.out.println("ERROR: No such command");
     }
     DatagramPacket returnpacket = new DatagramPacket(
@@ -119,6 +124,7 @@ class TCPServerThread extends Thread{
   @Override
   public void run() {
     try {
+      String response =" ";
       Scanner sc = new Scanner(theClient.getInputStream());
       PrintWriter pout = new PrintWriter(theClient.getOutputStream(), true);
       while (sc.hasNextLine()) {
@@ -133,7 +139,7 @@ class TCPServerThread extends Thread{
           String stu = tokens[1];
           String[] arg = cmd.split("\"");
           String bName = arg[1];
-          String response = bI.borrow(bName,stu);
+           response = bI.borrow(bName,stu);
           pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
@@ -141,30 +147,34 @@ class TCPServerThread extends Thread{
           String id = tokens[1];
           id = id.trim();
           Integer rId = Integer.parseInt(id);
-          String response = bI.returning(rId);
+           response = bI.returning(rId);
           pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("inventory")) {
-          String response = bI.getInventory();
+           response = bI.getInventory();
           pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("list")) {
           String stu = tokens[1];
-          String response = bI.list(stu);
+           response = bI.list(stu);
           pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("exit")) {
-          String response = bI.getInventory();
+           response = bI.getInventory();
           pout.println(response);
+          theClient.close();
+          //System.out.println("socket closed");
           // TODO: send appropriate command to the server
         } else {
           System.out.println("ERROR: No such command");
         }
-        pout.println(cmd);
+        //System.out.println(cmd + " " + response );;
       }
+      //System.out.println("thread done");
+
 
     }catch (IOException e) {
       e.printStackTrace();
@@ -185,7 +195,7 @@ class TCPHandler extends Thread{
     try {
       ServerSocket listener = new ServerSocket(port);
       Socket s;
-      System.out.println("waiting to connect ");
+     // System.out.println("waiting to connect ");
       while ( (s = listener.accept()) != null) {
         Thread t = new TCPServerThread(s, bI);
         t.start();
