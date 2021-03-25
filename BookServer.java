@@ -1,6 +1,10 @@
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 
 
@@ -8,9 +12,11 @@ import java.util.Scanner;
 class UDPServerThread extends Thread{
   DatagramPacket datapacket, returnpacket;
   DatagramSocket datasocket;
-  UDPServerThread(DatagramPacket dp, DatagramSocket dS) {
+  BookInventory bI;
+  UDPServerThread(DatagramPacket dp, DatagramSocket dS, BookInventory bI) {
     datasocket = dS;
     datapacket = dp;
+    this.bI = bI;
   }
   @Override
   public void run(){
@@ -18,25 +24,44 @@ class UDPServerThread extends Thread{
     String command = new String(datapacket.getData());
     buffer = command.getBytes();
     String[] tokens = command.split(" ");
-//    if (tokens[0].equals("setmode")) {
-//      // TODO: set the mode of communication for sending commands to the server
-//    } else if (tokens[0].equals("borrow")) {
-//      // TODO: send appropriate command to the server and display the
-//      // appropriate responses form the server
-//    } else if (tokens[0].equals("return")) {
-//      // TODO: send appropriate command to the server and display the
-//      // appropriate responses form the server
-//    } else if (tokens[0].equals("inventory")) {
-//      // TODO: send appropriate command to the server and display the
-//      // appropriate responses form the server
-//    } else if (tokens[0].equals("list")) {
-//      // TODO: send appropriate command to the server and display the
-//      // appropriate responses form the server
-//    } else if (tokens[0].equals("exit")) {
-//      // TODO: send appropriate command to the server
-//    } else {
-//      System.out.println("ERROR: No such command");
-//    }
+    if (tokens[0].equals("setmode")) {
+      String response = "The communication mode is set to UDP";
+      buffer = response.getBytes();
+      // TODO: set the mode of communication for sending commands to the server
+    } else if (tokens[0].equals("borrow")) {
+      String stu = tokens[1];
+      String[] arg = command.split("\"");
+      String bName = arg[1];
+      String response = bI.borrow(stu,bName);
+      buffer = response.getBytes();
+      // TODO: send appropriate command to the server and display the
+      // appropriate responses form the server
+    } else if (tokens[0].equals("return")) {
+      String id = tokens[1];
+      id = id.trim();
+      Integer rId = Integer.parseInt(id);
+      String response = bI.returning(rId);
+      buffer = response.getBytes();
+      // TODO: send appropriate command to the server and display the
+      // appropriate responses form the server
+    } else if (tokens[0].equals("inventory")) {
+      String response = bI.getInventory();
+      buffer = response.getBytes();
+      // TODO: send appropriate command to the server and display the
+      // appropriate responses form the server
+    } else if (tokens[0].equals("list")) {
+      String stu = tokens[1];
+      String response = bI.list(stu);
+      buffer = response.getBytes();
+      // TODO: send appropriate command to the server and display the
+      // appropriate responses form the server
+    } else if (tokens[0].equals("exit")) {
+      String response = bI.getInventory();
+      buffer = response.getBytes();
+      // TODO: send appropriate command to the server
+    } else {
+      System.out.println("ERROR: No such command");
+    }
     DatagramPacket returnpacket = new DatagramPacket(
             buffer,
             buffer.length,
@@ -55,13 +80,14 @@ class UDPHandler extends Thread{
   int len = 10000;
   byte[] buf;
   int portNum;
-  UDPHandler(int port) {
+  BookInventory bI;
+  UDPHandler(int port, BookInventory bI) {
     portNum = port;
+    this.bI = bI;
   }
 
   @Override
   public void run(){
-    DatagramSocket datasocket = null;
     try {
       datasocket = new DatagramSocket(portNum);
     } catch (SocketException e) {
@@ -72,7 +98,7 @@ class UDPHandler extends Thread{
         byte[] buf = new byte[len];
         datapacket = new DatagramPacket(buf, buf.length);
         datasocket.receive(datapacket);
-        Thread t = new UDPServerThread(datapacket, datasocket);
+        Thread t = new UDPServerThread(datapacket, datasocket,bI);
         t.start();
 
       } catch (IOException e) {
@@ -85,8 +111,10 @@ class UDPHandler extends Thread{
 
 class TCPServerThread extends Thread{
   Socket theClient;
-  TCPServerThread(Socket s){
+  BookInventory bI;
+  TCPServerThread(Socket s,BookInventory bI){
     theClient = s;
+    this.bI = bI;
   }
   @Override
   public void run() {
@@ -98,21 +126,39 @@ class TCPServerThread extends Thread{
         String[] tokens = cmd.split(" ");
 
         if (tokens[0].equals("setmode")) {
+          pout.println("The communication mode is set to TCP");
           // TODO: set the mode of communication for sending commands to the server
         }
         else if (tokens[0].equals("borrow")) {
+          String stu = tokens[1];
+          String[] arg = cmd.split("\"");
+          String bName = arg[1];
+          String response = bI.borrow(bName,stu);
+          pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("return")) {
+          String id = tokens[1];
+          id = id.trim();
+          Integer rId = Integer.parseInt(id);
+          String response = bI.returning(rId);
+          pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("inventory")) {
+          String response = bI.getInventory();
+          pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("list")) {
+          String stu = tokens[1];
+          String response = bI.list(stu);
+          pout.println(response);
           // TODO: send appropriate command to the server and display the
           // appropriate responses form the server
         } else if (tokens[0].equals("exit")) {
+          String response = bI.getInventory();
+          pout.println(response);
           // TODO: send appropriate command to the server
         } else {
           System.out.println("ERROR: No such command");
@@ -128,9 +174,11 @@ class TCPServerThread extends Thread{
 }
 
 class TCPHandler extends Thread{
+  BookInventory bI;
   int port;
-  public TCPHandler(int tcpPort) {
+  public TCPHandler(int tcpPort, BookInventory bI) {
     port = tcpPort;
+    this.bI = bI;
   }
   @Override
   public void run() {
@@ -139,7 +187,7 @@ class TCPHandler extends Thread{
       Socket s;
       System.out.println("waiting to connect ");
       while ( (s = listener.accept()) != null) {
-        Thread t = new TCPServerThread(s);
+        Thread t = new TCPServerThread(s, bI);
         t.start();
       }
     } catch (IOException e) {
@@ -152,7 +200,8 @@ class TCPHandler extends Thread{
 
 
 public class BookServer {
-  public static void main (String[] args) {
+  public static void main(String[] args) {
+    BookInventory bI = new BookInventory();
     int tcpPort;
     int udpPort;
     if (args.length != 1) {
@@ -163,36 +212,66 @@ public class BookServer {
     tcpPort = 7000;
     udpPort = 8000;
 
-    // parse the inventory file
-    Thread tCP = new TCPHandler(tcpPort);
-    Thread uDP = new UDPHandler(udpPort);
-    tCP.start();
-    uDP.start();
+    Scanner sc = null;
+    try {
+      sc = new Scanner(new FileReader(fileName));
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
+
+    while (sc.hasNextLine()) {
+      String cmd = sc.nextLine();
+      String[] bookName = cmd.split("\"");
+      bI.addBook(bookName[1], Integer.parseInt(bookName[2].trim()));
+    }
+
+      // parse the inventory file
+      Thread tCP = new TCPHandler(tcpPort, bI);
+      Thread uDP = new UDPHandler(udpPort, bI);
+      tCP.start();
+      uDP.start();
 
 
-    // TODO: handle request from clients
+      // TODO: handle request from clients
+    }
   }
-}
 
-public class BookInventory {
-  Set<Book> inventory;
-  int rid;
-  HashMap<String, ArrayList<Book>> studentList;
 
+ class BookInventory {
+  ArrayList<Book> inventory;
+  //Set<Book> inventory;
+  Integer rid;
+  HashMap<String, ArrayList<Record>> studentList;
+  HashMap<Integer, Record> recordList;
   public class Book {
       String name;
       int quantity;
-      int id;
 
       Book(String n, int amount) {
         name = n;
         quantity = amount;
-        id = -1;
       }
   }
 
+  class Record {
+    // class that holds information about borrowed books
+    String bookName;
+    String stuName;
+    Integer recordID;
+    Integer booklocation;
+    Record(String name, String student, Integer id, Integer bookID){
+      bookName = name;
+      stuName = student;
+      recordID = id;
+      booklocation = bookID;
+    }
+
+  }
+
   BookInventory() {
-    inventory = new HashSet<Book>();
+    inventory = new ArrayList<>();
+    recordList = new HashMap<>();
+    //inventory = new HashSet<Book>();
     rid = 0;
     studentList = new HashMap<>();
     // Change to hashmap.
@@ -213,29 +292,36 @@ public class BookInventory {
     String s = "";
   for(Book b : inventory) {
     if((b.name).equals(bookname)) {
-      if (b.quantity == 0) {
+      if (b.quantity <= 0) {
         s = "Request Failed - Book not available";
         return s;
       }
+      Integer index = inventory.indexOf(b);
+
+     // Record temp = new Record(book, studentName, RecordID, i);
+
       if(studentList.containsKey(client)) {
         //Insert book into client's invent
-        ArrayList<Book> temp = studentList.get(client);
-        Book bb = b;
+        //quantiy --;
+        b.quantity--;
+        inventory.set(index,b);
         rid++;
-        b--;
-        bb.id = rid;
-        temp.add(bb);
+        ArrayList<Record> temp = studentList.get(client);
+        Record tempR = new Record(b.name,client,rid,index);
+        temp.add(tempR);
         studentList.replace(client,temp);
+        recordList.put(rid, tempR);
       } else {
-        ArrayList<Book> temp = new ArrayList<Book>();
-        Book bb = b;
+        b.quantity--;
+        inventory.set(index,b);
         rid++;
-        b--;
-        bb.id = rid;
-        temp.add(bb);
+        ArrayList<Record> temp = new ArrayList<Record>();
+        Record tempR = new Record(b.name,client,rid,index);
+        temp.add(tempR);
         studentList.put(client, temp);
+        recordList.put(rid, tempR);
       }
-      s = "Your request has been approved, " + rid.toString();
+      s = "Your request has been approved, " + rid.toString() + " " + client + " \"" + b.name + "\" ";
       return s;
     }
   }
@@ -248,11 +334,19 @@ Return command returns recordid of book associated with the passed id.
   public synchronized String returning(int recordid) {
     //Access book here...
     String s = "";
-
-    // Use record class.
-    s = recordid + " is returned";
-    // else return
-    s = recordid + " not found";
+    if(recordList.containsKey(recordid)){
+      Record rReturned = recordList.remove(recordid);
+      Book b = inventory.get(rReturned.booklocation);
+      b.quantity++;
+      inventory.set(rReturned.booklocation, b);
+      ArrayList<Record> temp = studentList.get(rReturned.stuName);
+      temp.remove(rReturned);
+      // Use record class.
+      s = recordid + " is returned";
+    }else{
+      // else return
+      s = recordid + " not found, no such borrow record";
+    }
     return s;
   }
   /*
@@ -261,16 +355,15 @@ Returns message if no record.
  */
   public synchronized String list(String client) {
     String s = "";
-    ArrayList<Book> temp = studentList.get(client);
-    for(int i = 0; i <temp.length(); i++) {
-      s += temp.get(i).name + " " + temp.get(i).record;
-    }
-    if(s == "") {
-      "No record found for " + client;
+    if(studentList.containsKey(client)){
+      ArrayList<Record> temp = studentList.get(client);
+      for(int i = 0; i <temp.size(); i++) {
+        s += temp.get(i).recordID.toString() + " \"" + temp.get(i).bookName + "\"" + "$";
+      }
+    }else{
+      s = "No record found for " + client;
     }
     // Concatenate into some long string
-
-
     return s;
   }
 
@@ -280,12 +373,11 @@ Lists All Books in inventory.
   public synchronized String getInventory() {
     String s = "";
     for(Book b : inventory) {
-      System.out.println(b.name + " " + b.record);
+     String str = ("\"" + b.name + "\" " + b.quantity + "$");
+      s = s + str;
       // change to add to s
     }
     return s;
   }
-
-
 
 }
